@@ -324,13 +324,17 @@ class Html
     {
         $cNodes = $node->childNodes;
         if (count($cNodes) > 0) {
-            $text = '';
+            $text = array();
             foreach ($cNodes as $cNode) {
                 if ($cNode->nodeName == '#text') {
-                    $text = $cNode->nodeValue;
+                    $text[] = $cNode->nodeValue;
+                }else{
+                    if($cNode->nodeName == 'strong' || $cNode->nodeName == 'em'){
+                        $text[] = $cNode->nodeValue;
+                    }
                 }
             }
-            $element->addListItem($text, $data['listdepth'], $styles['font'], $styles['list'], $styles['paragraph']);
+            $element->addListItem(implode(' ',$text), $data['listdepth'], $styles['font'], $styles['list'], $styles['paragraph']);
         }
 
         return null;
