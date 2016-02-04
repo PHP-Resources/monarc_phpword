@@ -49,7 +49,9 @@ class Html
         $html = str_replace(array('&lt;', '&gt;', '&amp;'), array('_lt_', '_gt_', '_amp_'), $html);
         $html = html_entity_decode($html, ENT_QUOTES, 'UTF-8');
         $html = str_replace('&', '&amp;', $html);
-        $html = str_replace(array('_lt_', '_gt_', '_amp_'), array('&lt;', '&gt;', '&amp;'), $html);
+        //Cyril - mise en commentaire pour pouvoir afficher les > < & dans le texte
+        //fonctionne de paire avec la modif du fichier TemplateProcessor, méthode save()
+        // $html = str_replace(array('_lt_', '_gt_', '_amp_'), array('&lt;', '&gt;', '&amp;'), $html);
 
         if (false === $fullHTML) {
             $html = '<body>' . $html . '</body>';
