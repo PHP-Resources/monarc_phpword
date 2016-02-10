@@ -49,7 +49,9 @@ class Html
         $html = str_replace(array('&lt;', '&gt;', '&amp;'), array('_lt_', '_gt_', '_amp_'), $html);
         $html = html_entity_decode($html, ENT_QUOTES, 'UTF-8');
         $html = str_replace('&', '&amp;', $html);
-        $html = str_replace(array('_lt_', '_gt_', '_amp_'), array('&lt;', '&gt;', '&amp;'), $html);
+        //Cyril - mise en commentaire pour pouvoir afficher les > < & dans le texte
+        //fonctionne de paire avec la modif du fichier TemplateProcessor, méthode save()
+        // $html = str_replace(array('_lt_', '_gt_', '_amp_'), array('&lt;', '&gt;', '&amp;'), $html);
 
         if (false === $fullHTML) {
             $html = '<body>' . $html . '</body>';
@@ -112,11 +114,11 @@ class Html
                               // $method        $node   $element    $styles     $data   $argument1      $argument2
             'p'         => array('Paragraph',   $node,  $element,   $styles,    null,   null,           null),
             'h1'        => array('Heading',     $node,  $element,   $styles,    null,   'Heading1',     null),
-            'h2'        => array('Heading',     null,   $element,   $styles,    null,   'Heading2',     null),
-            'h3'        => array('Heading',     null,   $element,   $styles,    null,   'Heading3',     null),
-            'h4'        => array('Heading',     null,   $element,   $styles,    null,   'Heading4',     null),
-            'h5'        => array('Heading',     null,   $element,   $styles,    null,   'Heading5',     null),
-            'h6'        => array('Heading',     null,   $element,   $styles,    null,   'Heading6',     null),
+            'h2'        => array('Heading',     $node,  $element,   $styles,    null,   'Heading2',     null),
+            'h3'        => array('Heading',     $node,  $element,   $styles,    null,   'Heading3',     null),
+            'h4'        => array('Heading',     $node,  $element,   $styles,    null,   'Heading4',     null),
+            'h5'        => array('Heading',     $node,  $element,   $styles,    null,   'Heading5',     null),
+            'h6'        => array('Heading',     $node,  $element,   $styles,    null,   'Heading6',     null),
             '#text'     => array('Text',        $node,  $element,   $styles,    null,   null,           null),
             'strong'    => array('Property',    null,   null,       $styles,    null,   'bold',         true),
             'em'        => array('Property',    null,   null,       $styles,    null,   'italic',       true),
@@ -324,13 +326,17 @@ class Html
     {
         $cNodes = $node->childNodes;
         if (count($cNodes) > 0) {
-            $text = '';
+            $text = array();
             foreach ($cNodes as $cNode) {
                 if ($cNode->nodeName == '#text') {
-                    $text = $cNode->nodeValue;
+                    $text[] = $cNode->nodeValue;
+                }else{
+                    if($cNode->nodeName == 'strong' || $cNode->nodeName == 'em'){
+                        $text[] = $cNode->nodeValue;
+                    }
                 }
             }
-            $element->addListItem($text, $data['listdepth'], $styles['font'], $styles['list'], $styles['paragraph']);
+            $element->addListItem(implode(' ',$text), $data['listdepth'], $styles['font'], $styles['list'], $styles['paragraph']);
         }
 
         return null;

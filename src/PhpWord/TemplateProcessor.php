@@ -409,7 +409,7 @@ class TemplateProcessor {
 			$this->zipClass->addFromString($this->getHeaderName($index), $this->temporaryDocumentHeaders[$index]);
 		}
 
-		$this->zipClass->addFromString('word/document.xml', $this->temporaryDocumentMainPart);
+		$this->zipClass->addFromString('word/document.xml', str_replace(array('_lt_', '_gt_', '_amp_'), array('&lt;', '&gt;', '&amp;'), $this->temporaryDocumentMainPart));
 
 		foreach ($this->temporaryDocumentFooters as $index => $headerXML) {
 			$this->zipClass->addFromString($this->getFooterName($index), $this->temporaryDocumentFooters[$index]);
