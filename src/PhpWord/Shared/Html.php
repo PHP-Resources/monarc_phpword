@@ -331,7 +331,7 @@ class Html
                 if ($cNode->nodeName == '#text') {
                     $text[] = $cNode->nodeValue;
                 }else{
-                    if($cNode->nodeName == 'strong' || $cNode->nodeName == 'em'){
+                    if($cNode->nodeName == 'strong' || $cNode->nodeName == 'em' || $cNode->nodeName == 'span'){
                         $text[] = $cNode->nodeValue;
                     }
                 }
