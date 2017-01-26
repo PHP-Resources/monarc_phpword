@@ -327,8 +327,8 @@ class TemplateProcessor
                 $imgWriter = new \PhpOffice\PhpWord\Writer\Word2007\Element\Image($writer, $image);
                 $imgWriter->write();
                 $replace = trim($writer->getData());
-                file_put_contents("data/test.xml",$replace);
-                file_put_contents("data/test2.xml",$this->tempDocumentMainPart);
+                // file_put_contents("data/test.xml",$replace);
+                // file_put_contents("data/test2.xml",$this->tempDocumentMainPart);
                 $this->tempDocumentMainPart = $this->setValueForPart($search, $replace, $this->tempDocumentMainPart, $limit);
             }
         }
@@ -587,12 +587,35 @@ class TemplateProcessor
      */
     protected function setValueForPart($search, $replace, $documentPartXML, $limit)
     {
-        // Note: we can't use the same function for both cases here, because of performance considerations.
-        if (self::MAXIMUM_REPLACEMENTS_DEFAULT === $limit) {
-            return str_replace($search, $replace, $documentPartXML);
-        } else {
-            $regExpEscaper = new RegExp();
-            return preg_replace($regExpEscaper->escape($search), $replace, $documentPartXML, $limit);
+        if(strpos($replace, '<w:tbl>') === 0){
+            $regExpDelim = '/';
+            $escapedSearch = preg_quote($search, $regExpDelim);
+            $found = false;
+            $xml = new \SimpleXMLElement($documentPartXML);
+            foreach ($xml->xpath("//w:p/*[contains(.,'{$search}')]/parent::*") as $node) {
+                $count = 0;
+                $escapedSearch = preg_quote($node->asXML(), $regExpDelim);
+                $documentPartXML = preg_replace("{$regExpDelim}{$escapedSearch}{$regExpDelim}u", $replace, $documentPartXML, $limit,$count);
+                if($limit == self::MAXIMUM_REPLACEMENTS_DEFAULT){
+                    $found = true;
+                }else{
+                    $limit -= $count;
+                }
+                if($limit == 0){
+                    break;
+                }
+            }
+            if($found){
+                return $documentPartXML;
+            }
+        }else{
+            // Note: we can't use the same function for both cases here, because of performance considerations.
+            if (self::MAXIMUM_REPLACEMENTS_DEFAULT === $limit) {
+                return str_replace($search, $replace, $documentPartXML);
+            } else {
+                $regExpEscaper = new RegExp();
+                return preg_replace($regExpEscaper->escape($search), $replace, $documentPartXML, $limit);
+            }
         }
     }
 
