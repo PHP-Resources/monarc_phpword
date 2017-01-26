@@ -63,6 +63,27 @@ class TemplateProcessor
     protected $tempDocumentFooters = array();
 
     /**
+     * Content of main rels document part (in XML format) of the temporary document.
+     *
+     * @var string
+     */
+    protected $tempRelsDocumentMainPart;
+
+    /**
+     * Content of rels headers (in XML format) of the temporary document.
+     *
+     * @var string[]
+     */
+    protected $tempRelsDocumentHeaders = array();
+
+    /**
+     * Content of rels footers (in XML format) of the temporary document.
+     *
+     * @var string[]
+     */
+    protected $tempRelsDocumentFooters = array();
+
+    /**
      * @since 0.12.0 Throws CreateTemporaryFileException and CopyFileException instead of Exception.
      *
      * @param string $documentTemplate The fully qualified template filename.
@@ -101,6 +122,22 @@ class TemplateProcessor
             $index++;
         }
         $this->tempDocumentMainPart = $this->fixBrokenMacros($this->zipClass->getFromName($this->getMainPartName()));
+
+        $index = 1;
+        while (false !== $this->zipClass->locateName($this->getRelsHeaderName($index))) {
+            $this->tempRelsDocumentHeaders[$index] = $this->fixBrokenMacros(
+                $this->zipClass->getFromName($this->getRelsHeaderName($index))
+            );
+            $index++;
+        }
+        $index = 1;
+        while (false !== $this->zipClass->locateName($this->getRelsFooterName($index))) {
+            $this->tempRelsDocumentFooters[$index] = $this->fixBrokenMacros(
+                $this->zipClass->getFromName($this->getRelsFooterName($index))
+            );
+            $index++;
+        }
+        $this->tempRelsDocumentMainPart = $this->fixBrokenMacros($this->zipClass->getFromName($this->getRelsMainPartName()));
     }
 
     /**
@@ -210,8 +247,8 @@ class TemplateProcessor
      */
     public function setValue($search, $replace, $limit = self::MAXIMUM_REPLACEMENTS_DEFAULT)
     {
-	$replace = str_replace('&', '&amp;', $replace);
-	$replace = preg_replace('~\R~u', '</w:t><w:br/><w:t>', $replace);
+        $replace = str_replace('&', '&amp;', $replace);
+        $replace = preg_replace('~\R~u', '</w:t><w:br/><w:t>', $replace);
 
         if (is_array($search)) {
             foreach ($search as &$item) {
@@ -237,6 +274,64 @@ class TemplateProcessor
         $this->tempDocumentHeaders = $this->setValueForPart($search, $replace, $this->tempDocumentHeaders, $limit);
         $this->tempDocumentMainPart = $this->setValueForPart($search, $replace, $this->tempDocumentMainPart, $limit);
         $this->tempDocumentFooters = $this->setValueForPart($search, $replace, $this->tempDocumentFooters, $limit);
+    }
+
+    /**
+     * @param string $search
+     * @param string $path
+     * @param string[] $options
+     * @param integer $limit
+     *
+     * @return void
+     */
+    public function setImg($search, $path, $options = array(), $limit = self::MAXIMUM_REPLACEMENTS_DEFAULT){
+        $search = self::ensureMacroCompleted($search);
+        if(!file_exists($path)){
+            return;
+        }
+        if(strpos($this->tempDocumentMainPart, $search) !== false){
+            $id = $filename = null;
+            if(empty($this->tempRelsDocumentMainPart)){
+                // todo : if empty create
+            }else{
+                $path_parts = pathinfo($path);
+                $filename = $path_parts['basename'];
+                $domDocument = new \DOMDocument();
+                if (false === $domDocument->loadXML($this->tempRelsDocumentMainPart)) {
+                    throw new Exception('Could not load the given XML document.');
+                }
+                $id = $domDocument->getElementsByTagName('Relationship')->length +1;
+                $this->zipClass->addFile($path,'word/media/'.$filename);
+
+                // Build Relationship datas
+                $relationShip = $domDocument->createElement("Relationship");
+                $att = $domDocument->createAttribute('Id');
+                $att->value = "rId".$id;
+                $relationShip->appendChild($att);
+                $att = $domDocument->createAttribute('Target');
+                $att->value = 'media/'.$filename;
+                $relationShip->appendChild($att);
+                $att = $domDocument->createAttribute('Type');
+                $att->value = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
+                $relationShip->appendChild($att);
+                $domDocument->documentElement->appendChild($relationShip);
+                $this->tempRelsDocumentMainPart = $domDocument->saveXML();
+            }
+
+            if(!empty($id) && !empty($filename)){
+                $image = new \PhpOffice\PhpWord\Element\Image($path,$options);
+                $image->setRelationId($id);
+                $image->setDocPart("");
+                // We assume its docx ?
+                $writer = new \PhpOffice\Common\XMLWriter();
+                $imgWriter = new \PhpOffice\PhpWord\Writer\Word2007\Element\Image($writer, $image);
+                $imgWriter->write();
+                $replace = trim($writer->getData());
+                file_put_contents("data/test.xml",$replace);
+                file_put_contents("data/test2.xml",$this->tempDocumentMainPart);
+                $this->tempDocumentMainPart = $this->setValueForPart($search, $replace, $this->tempDocumentMainPart, $limit);
+            }
+        }
     }
 
     /**
@@ -412,6 +507,16 @@ class TemplateProcessor
             $this->zipClass->addFromString($this->getFooterName($index), $xml);
         }
 
+        foreach ($this->tempRelsDocumentHeaders as $index => $xml) {
+            $this->zipClass->addFromString($this->getRelsHeaderName($index), $xml);
+        }
+
+        $this->zipClass->addFromString($this->getRelsMainPartName(), $this->tempRelsDocumentMainPart);
+
+        foreach ($this->tempRelsDocumentFooters as $index => $xml) {
+            $this->zipClass->addFromString($this->getRelsFooterName($index), $xml);
+        }
+
         // Close zip file
         if (false === $this->zipClass->close()) {
             throw new Exception('Could not close zip file.');
@@ -535,6 +640,38 @@ class TemplateProcessor
     protected function getFooterName($index)
     {
         return sprintf('word/footer%d.xml', $index);
+    }
+
+    /**
+     * Get the name of the rels header file for $index.
+     *
+     * @param integer $index
+     *
+     * @return string
+     */
+    protected function getRelsHeaderName($index)
+    {
+        return sprintf('word/_rels/header%d.xml.rels', $index);
+    }
+
+    /**
+     * @return string
+     */
+    protected function getRelsMainPartName()
+    {
+        return 'word/_rels/document.xml.rels';
+    }
+
+    /**
+     * Get the name of the rels footer file for $index.
+     *
+     * @param integer $index
+     *
+     * @return string
+     */
+    protected function getRelsFooterName($index)
+    {
+        return sprintf('word/_rels/footer%d.xml.rels', $index);
     }
 
     /**
