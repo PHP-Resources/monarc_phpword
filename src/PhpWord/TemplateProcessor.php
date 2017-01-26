@@ -289,34 +289,45 @@ class TemplateProcessor
         if(!file_exists($path)){
             return;
         }
-        if(strpos($this->tempDocumentMainPart, $search) !== false){
-            $id = $filename = null;
-            if(empty($this->tempRelsDocumentMainPart)){
-                // todo : if empty create
-            }else{
-                $path_parts = pathinfo($path);
-                $filename = $path_parts['basename'];
-                $domDocument = new \DOMDocument();
-                if (false === $domDocument->loadXML($this->tempRelsDocumentMainPart)) {
-                    throw new Exception('Could not load the given XML document.');
-                }
-                $id = $domDocument->getElementsByTagName('Relationship')->length +1;
-                $this->zipClass->addFile($path,'word/media/'.$filename);
 
-                // Build Relationship datas
-                $relationShip = $domDocument->createElement("Relationship");
-                $att = $domDocument->createAttribute('Id');
-                $att->value = "rId".$id;
-                $relationShip->appendChild($att);
-                $att = $domDocument->createAttribute('Target');
-                $att->value = 'media/'.$filename;
-                $relationShip->appendChild($att);
-                $att = $domDocument->createAttribute('Type');
-                $att->value = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
-                $relationShip->appendChild($att);
-                $domDocument->documentElement->appendChild($relationShip);
-                $this->tempRelsDocumentMainPart = $domDocument->saveXML();
+        list($this->tempDocumentMainPart, $this->tempRelsDocumentMainPart) = $this->setImgForPart($this->tempDocumentMainPart, $this->tempRelsDocumentMainPart, $search, $path, $options, $limit);
+
+        foreach($this->tempDocumentHeaders as $i => $h){
+            list($this->tempDocumentHeaders[$i], $this->tempRelsDocumentHeaders[$i]) = $this->setImgForPart($h, isset($this->tempRelsDocumentHeaders[$i])?$this->tempRelsDocumentHeaders[$i]:'', $search, $path, $options, $limit);
+        }
+        foreach($this->tempDocumentFooters as $i => $f){
+            list($this->tempDocumentFooters[$i], $this->tempRelsDocumentFooters[$i]) = $this->setImgForPart($f, isset($this->tempRelsDocumentFooters[$i])?$this->tempRelsDocumentFooters[$i]:'', $search, $path, $options, $limit);
+        }
+    }
+
+    protected function setImgForPart($document, $relDocument, $search, $path, $options = array(), $limit = self::MAXIMUM_REPLACEMENTS_DEFAULT){
+        if(strpos($document, $search) !== false){
+            $id = $filename = null;
+            if(empty($relDocument)){
+                $relDocument = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
             }
+            $path_parts = pathinfo($path);
+            $filename = $path_parts['basename'];
+            $domDocument = new \DOMDocument();
+            if (false === $domDocument->loadXML($relDocument)) {
+                throw new Exception('Could not load the given XML document.');
+            }
+            $id = $domDocument->getElementsByTagName('Relationship')->length +1;
+            $this->zipClass->addFile($path,'word/media/'.$filename);
+
+            // Build Relationship datas
+            $relationShip = $domDocument->createElement("Relationship");
+            $att = $domDocument->createAttribute('Id');
+            $att->value = "rId".$id;
+            $relationShip->appendChild($att);
+            $att = $domDocument->createAttribute('Target');
+            $att->value = 'media/'.$filename;
+            $relationShip->appendChild($att);
+            $att = $domDocument->createAttribute('Type');
+            $att->value = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
+            $relationShip->appendChild($att);
+            $domDocument->documentElement->appendChild($relationShip);
+            $relDocument = $domDocument->saveXML();
 
             if(!empty($id) && !empty($filename)){
                 $image = new \PhpOffice\PhpWord\Element\Image($path,$options);
@@ -327,11 +338,10 @@ class TemplateProcessor
                 $imgWriter = new \PhpOffice\PhpWord\Writer\Word2007\Element\Image($writer, $image);
                 $imgWriter->write();
                 $replace = trim($writer->getData());
-                // file_put_contents("data/test.xml",$replace);
-                // file_put_contents("data/test2.xml",$this->tempDocumentMainPart);
-                $this->tempDocumentMainPart = $this->setValueForPart($search, $replace, $this->tempDocumentMainPart, $limit);
+                $document = $this->setValueForPartContent($search, $replace, $document, $limit);
             }
         }
+        return [$document, $relDocument];
     }
 
     /**
@@ -588,26 +598,14 @@ class TemplateProcessor
     protected function setValueForPart($search, $replace, $documentPartXML, $limit)
     {
         if(strpos($replace, '<w:tbl>') === 0){
-            $regExpDelim = '/';
-            $escapedSearch = preg_quote($search, $regExpDelim);
-            $found = false;
-            $xml = new \SimpleXMLElement($documentPartXML);
-            foreach ($xml->xpath("//w:p/*[contains(.,'{$search}')]/parent::*") as $node) {
-                $count = 0;
-                $escapedSearch = preg_quote($node->asXML(), $regExpDelim);
-                $documentPartXML = preg_replace("{$regExpDelim}{$escapedSearch}{$regExpDelim}u", $replace, $documentPartXML, $limit,$count);
-                if($limit == self::MAXIMUM_REPLACEMENTS_DEFAULT){
-                    $found = true;
-                }else{
-                    $limit -= $count;
+            if(is_array($documentPartXML)){
+                foreach($documentPartXML as &$doc){
+                    $doc = $this->setValueForPartContent($search, $replace, $doc, $limit);
                 }
-                if($limit == 0){
-                    break;
-                }
+            }else{
+                $documentPartXML = $this->setValueForPartContent($search, $replace, $documentPartXML, $limit);
             }
-            if($found){
-                return $documentPartXML;
-            }
+            return $documentPartXML;
         }else{
             // Note: we can't use the same function for both cases here, because of performance considerations.
             if (self::MAXIMUM_REPLACEMENTS_DEFAULT === $limit) {
@@ -617,6 +615,27 @@ class TemplateProcessor
                 return preg_replace($regExpEscaper->escape($search), $replace, $documentPartXML, $limit);
             }
         }
+    }
+
+    protected function setValueForPartContent($search, $replace, $documentPartXML, $limit)
+    {
+        if(!empty($documentPartXML)){
+            $regExpDelim = '/';
+            $escapedSearch = preg_quote($search, $regExpDelim);
+            $xml = new \SimpleXMLElement($documentPartXML);
+            foreach ($xml->xpath("//w:p/*[contains(.,'{$search}')]/parent::*") as $node) {
+                $count = 0;
+                $escapedSearch = preg_quote($node->asXML(), $regExpDelim);
+                $documentPartXML = preg_replace("{$regExpDelim}{$escapedSearch}{$regExpDelim}u", $replace, $documentPartXML, $limit,$count);
+                if($limit != self::MAXIMUM_REPLACEMENTS_DEFAULT){
+                    $limit -= $count;
+                }
+                if($limit == 0){
+                    break;
+                }
+            }
+        }
+        return $documentPartXML;
     }
 
     /**
