@@ -247,8 +247,8 @@ class TemplateProcessor
      */
     public function setValue($search, $replace, $limit = self::MAXIMUM_REPLACEMENTS_DEFAULT)
     {
-        $replace = str_replace('&', '&amp;', $replace);
-        $replace = preg_replace('~\R~u', '</w:t><w:br/><w:t>', $replace);
+        //$replace = str_replace('&', '&amp;', $replace);
+        //$replace = preg_replace('~\R~u', '</w:t><w:br/><w:t>', $replace);
 
         if (is_array($search)) {
             foreach ($search as &$item) {
@@ -274,6 +274,80 @@ class TemplateProcessor
         $this->tempDocumentHeaders = $this->setValueForPart($search, $replace, $this->tempDocumentHeaders, $limit);
         $this->tempDocumentMainPart = $this->setValueForPart($search, $replace, $this->tempDocumentMainPart, $limit);
         $this->tempDocumentFooters = $this->setValueForPart($search, $replace, $this->tempDocumentFooters, $limit);
+    }
+
+    /**
+     * @param string $search
+     * @param string $replace
+     * @param integer $limit
+     *
+     * @return void
+     */
+    public function setHtml($search, $replace, $limit = self::MAXIMUM_REPLACEMENTS_DEFAULT)
+    {
+        $search = self::ensureMacroCompleted($search);
+        //$replace = self::ensureUtf8Encoded($replace);
+
+        $replace = str_replace(
+            ['<br>', '<div>', '</div>'],
+            ['<br/>', '', ''],
+            $replace
+        );
+
+        // Turn it into word data
+        $phpWord = new \PhpOffice\PhpWord\PhpWord();
+        $section = $phpWord->addSection();
+        \PhpOffice\PhpWord\Shared\Html::addHtml($section, $replace);
+
+        $part = new \PhpOffice\PhpWord\Writer\Word2007\Part\Document();
+        $part->setParentWriter(new \PhpOffice\PhpWord\Writer\Word2007($phpWord));
+        $replace = $part->write();
+
+        $this->tempDocumentMainPart = $this->setValueForPartHtml($search, $replace, $this->tempDocumentMainPart, $limit);
+
+        foreach($this->tempDocumentHeaders as $i => $h){
+            $this->tempDocumentHeaders[$i] = $this->setValueForPartHtml($search, $replace, $this->tempDocumentHeaders[$i], $limit);
+        }
+
+        foreach($this->tempDocumentFooters as $i => $h){
+            $this->tempDocumentFooters[$i] = $this->setValueForPartHtml($search, $replace, $this->tempDocumentFooters[$i], $limit);
+        }
+    }
+
+    protected function setValueForPartHtml($search, $replace, $documentPartXML, $limit)
+    {
+        if(!empty($documentPartXML)){
+            $regExpDelim = '/';
+            $escapedSearch = preg_quote($search, $regExpDelim);
+            $xml = new \SimpleXMLElement($documentPartXML);
+            foreach ($xml->xpath("//w:p/*[contains(.,'{$search}')]/parent::*") as $node) {
+                $count = 0;
+                $escapedSearch = preg_quote($node->asXML(), $regExpDelim);
+
+                $attr = $node->attributes();
+                $xmlReplace = new \SimpleXMLElement($replace);
+                foreach($xmlReplace->xpath("//w:p") as &$sub){
+                    foreach($attr as $a => $b){
+                        $sub->addAttribute($a,$b);
+                    }
+                }
+
+                $replaceData = $xmlReplace->asXML();
+                if (preg_match('/<w:body>(.*)<w:sectPr>/is', $replaceData, $matches) === 1) {
+                    $replaceData = $matches[1];
+                }
+                $replaceData = str_replace(['w:val="'],['w:val="1'],$replaceData);
+
+                $documentPartXML = preg_replace("{$regExpDelim}{$escapedSearch}{$regExpDelim}u", $replaceData, $documentPartXML, $limit,$count);
+                if($limit != self::MAXIMUM_REPLACEMENTS_DEFAULT){
+                    $limit -= $count;
+                }
+                if($limit == 0){
+                    break;
+                }
+            }
+        }
+        return $documentPartXML;
     }
 
     /**
