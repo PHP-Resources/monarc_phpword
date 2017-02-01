@@ -582,22 +582,26 @@ class TemplateProcessor
     public function save()
     {
         foreach ($this->tempDocumentHeaders as $index => $xml) {
+            $xml = str_replace(array('_lt_', '_gt_', '_amp_'), array('&lt;', '&gt;', '&amp;'), $xml);
             $this->zipClass->addFromString($this->getHeaderName($index), $xml);
         }
 
-        $this->zipClass->addFromString($this->getMainPartName(), $this->tempDocumentMainPart);
+        $this->zipClass->addFromString($this->getMainPartName(), str_replace(array('_lt_', '_gt_', '_amp_'), array('&lt;', '&gt;', '&amp;'), $this->tempDocumentMainPart));
 
         foreach ($this->tempDocumentFooters as $index => $xml) {
+            $xml = str_replace(array('_lt_', '_gt_', '_amp_'), array('&lt;', '&gt;', '&amp;'), $xml);
             $this->zipClass->addFromString($this->getFooterName($index), $xml);
         }
 
         foreach ($this->tempRelsDocumentHeaders as $index => $xml) {
+            $xml = str_replace(array('_lt_', '_gt_', '_amp_'), array('&lt;', '&gt;', '&amp;'), $xml);
             $this->zipClass->addFromString($this->getRelsHeaderName($index), $xml);
         }
 
-        $this->zipClass->addFromString($this->getRelsMainPartName(), $this->tempRelsDocumentMainPart);
+        $this->zipClass->addFromString($this->getRelsMainPartName(), str_replace(array('_lt_', '_gt_', '_amp_'), array('&lt;', '&gt;', '&amp;'), $this->tempRelsDocumentMainPart));
 
         foreach ($this->tempRelsDocumentFooters as $index => $xml) {
+            $xml = str_replace(array('_lt_', '_gt_', '_amp_'), array('&lt;', '&gt;', '&amp;'), $xml);
             $this->zipClass->addFromString($this->getRelsFooterName($index), $xml);
         }
 
