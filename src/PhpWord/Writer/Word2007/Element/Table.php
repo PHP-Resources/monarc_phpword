@@ -80,21 +80,37 @@ class Table extends AbstractElement
     private function writeColumns(XMLWriter $xmlWriter, TableElement $element)
     {
         $rows = $element->getRows();
-        $rowCount = count($rows);
 
-        $cellWidths = array();
-        for ($i = 0; $i < $rowCount; $i++) {
-            $row = $rows[$i];
+        $cellWidths = $gridSpan = array();
+        foreach ($rows as $row) {
             $cells = $row->getCells();
-            if (count($cells) <= count($cellWidths)) {
+            if (count($cells) <= count($cellWidths) && count($gridSpan) == 0) {
                 continue;
             }
-            $cellWidths = array();
+            $nbCell = -1;
             foreach ($cells as $cell) {
-                $cellWidths[] = $cell->getWidth();
+                $grid = $cell->getStyle()->getGridSpan();
+                if(!empty($grid) && $grid > 1){
+                    $nbCell += $grid;
+                }else{
+                    $nbCell++;
+                }
+                if(!empty($grid) && $grid > 1 && $grid < count($cellWidths)){
+                    for($i=0;$i<$grid;$i++){
+                        if(!isset($gridSpan[($nbCell+$i)])){
+                            $cellWidths[$nbCell] = $cell->getWidth()/$grid;
+                            $gridSpan[($nbCell+$i)] = ($nbCell+$i);
+                        }
+                    }
+                }elseif(isset($gridSpan[$nbCell])){
+                    $cellWidths[$nbCell] = $cell->getWidth();
+                    unset($gridSpan[$nbCell]);
+                }else{
+                    $cellWidths[$nbCell] = $cell->getWidth();
+                }
             }
         }
-
+        ksort($cellWidths);
         $xmlWriter->startElement('w:tblGrid');
         foreach ($cellWidths as $width) {
             $xmlWriter->startElement('w:gridCol');
