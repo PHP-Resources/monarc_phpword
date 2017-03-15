@@ -81,7 +81,7 @@ class Table extends AbstractElement
     {
         $rows = $element->getRows();
 
-        $cellWidths = $gridSpan = array();
+        $cellWidths = $gridSpan = $goodDefine = array();
         foreach ($rows as $row) {
             $cells = $row->getCells();
             if (count($cells) <= count($cellWidths) && count($gridSpan) == 0) {
@@ -97,7 +97,7 @@ class Table extends AbstractElement
                 }
                 if(!empty($grid) && $grid > 1 && $grid < count($cellWidths)){
                     for($i=0;$i<$grid;$i++){
-                        if(!isset($gridSpan[($nbCell+$i)])){
+                        if(!isset($gridSpan[($nbCell+$i)]) && !isset($goodDefine[($nbCell+$i)])){
                             $cellWidths[$nbCell] = $cell->getWidth()/$grid;
                             $gridSpan[($nbCell+$i)] = ($nbCell+$i);
                         }
@@ -105,7 +105,9 @@ class Table extends AbstractElement
                 }elseif(isset($gridSpan[$nbCell])){
                     $cellWidths[$nbCell] = $cell->getWidth();
                     unset($gridSpan[$nbCell]);
+                    $goodDefine[$nbCell];
                 }else{
+                    $goodDefine[$nbCell];
                     $cellWidths[$nbCell] = $cell->getWidth();
                 }
             }
@@ -115,7 +117,7 @@ class Table extends AbstractElement
         foreach ($cellWidths as $width) {
             $xmlWriter->startElement('w:gridCol');
             if ($width !== null) {
-                $xmlWriter->writeAttribute('w:w', $width);
+                $xmlWriter->writeAttribute('w:w', number_format($width,0, ',',''));
                 $xmlWriter->writeAttribute('w:type', 'dxa');
             }
             $xmlWriter->endElement();
