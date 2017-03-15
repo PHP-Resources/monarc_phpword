@@ -336,7 +336,7 @@ class TemplateProcessor
                 if (preg_match('/<w:body>(.*)<w:sectPr>/is', $replaceData, $matches) === 1) {
                     $replaceData = $matches[1];
                 }
-                $replaceData = str_replace(['w:val="'],['w:val="1'],$replaceData);
+                $replaceData = str_replace(['w:val=""'],['w:val="1"'],$replaceData);
 
                 $documentPartXML = preg_replace("{$regExpDelim}{$escapedSearch}{$regExpDelim}u", $replaceData, $documentPartXML, $limit,$count);
                 if($limit != self::MAXIMUM_REPLACEMENTS_DEFAULT){
