@@ -105,9 +105,9 @@ class Table extends AbstractElement
                 }elseif(isset($gridSpan[$nbCell])){
                     $cellWidths[$nbCell] = $cell->getWidth();
                     unset($gridSpan[$nbCell]);
-                    $goodDefine[$nbCell];
+                    $goodDefine[$nbCell] = $nbCell;
                 }else{
-                    $goodDefine[$nbCell];
+                    $goodDefine[$nbCell] = $nbCell;
                     $cellWidths[$nbCell] = $cell->getWidth();
                 }
             }
