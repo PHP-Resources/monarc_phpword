@@ -10,8 +10,8 @@
  * file that was distributed with this source code. For the full list of
  * contributors, visit https://github.com/PHPOffice/PHPWord/contributors.
  *
- * @link        https://github.com/PHPOffice/PHPWord
- * @copyright   2010-2016 PHPWord contributors
+ * @see         https://github.com/PHPOffice/PHPWord
+ * @copyright   2010-2017 PHPWord contributors
  * @license     http://www.gnu.org/licenses/lgpl.txt LGPL version 3
  */
 
@@ -36,8 +36,6 @@ class Table extends AbstractElement
 {
     /**
      * Write element.
-     *
-     * @return void
      */
     public function write()
     {
@@ -75,49 +73,30 @@ class Table extends AbstractElement
      *
      * @param \PhpOffice\Common\XMLWriter $xmlWriter
      * @param \PhpOffice\PhpWord\Element\Table $element
-     * @return void
      */
     private function writeColumns(XMLWriter $xmlWriter, TableElement $element)
     {
         $rows = $element->getRows();
+        $rowCount = count($rows);
 
-        $cellWidths = $gridSpan = $goodDefine = array();
-        foreach ($rows as $row) {
+        $cellWidths = array();
+        for ($i = 0; $i < $rowCount; $i++) {
+            $row = $rows[$i];
             $cells = $row->getCells();
-            if (count($cells) <= count($cellWidths) && count($gridSpan) == 0) {
+            if (count($cells) <= count($cellWidths)) {
                 continue;
             }
-            $nbCell = -1;
+            $cellWidths = array();
             foreach ($cells as $cell) {
-                $grid = $cell->getStyle()->getGridSpan();
-                if(!empty($grid) && $grid > 1){
-                    $nbCell += $grid;
-                }else{
-                    $nbCell++;
-                }
-                if(!empty($grid) && $grid > 1 && $grid < count($cellWidths)){
-                    for($i=0;$i<$grid;$i++){
-                        if(!isset($gridSpan[($nbCell+$i)]) && !isset($goodDefine[($nbCell+$i)])){
-                            $cellWidths[$nbCell] = $cell->getWidth()/$grid;
-                            $gridSpan[($nbCell+$i)] = ($nbCell+$i);
-                        }
-                    }
-                }elseif(isset($gridSpan[$nbCell])){
-                    $cellWidths[$nbCell] = $cell->getWidth();
-                    unset($gridSpan[$nbCell]);
-                    $goodDefine[$nbCell] = $nbCell;
-                }else{
-                    $goodDefine[$nbCell] = $nbCell;
-                    $cellWidths[$nbCell] = $cell->getWidth();
-                }
+                $cellWidths[] = $cell->getWidth();
             }
         }
-        ksort($cellWidths);
+
         $xmlWriter->startElement('w:tblGrid');
         foreach ($cellWidths as $width) {
             $xmlWriter->startElement('w:gridCol');
             if ($width !== null) {
-                $xmlWriter->writeAttribute('w:w', number_format($width,0, ',',''));
+                $xmlWriter->writeAttribute('w:w', $width);
                 $xmlWriter->writeAttribute('w:type', 'dxa');
             }
             $xmlWriter->endElement();
@@ -130,7 +109,6 @@ class Table extends AbstractElement
      *
      * @param \PhpOffice\Common\XMLWriter $xmlWriter
      * @param \PhpOffice\PhpWord\Element\Row $row
-     * @return void
      */
     private function writeRow(XMLWriter $xmlWriter, RowElement $row)
     {
@@ -157,11 +135,9 @@ class Table extends AbstractElement
      *
      * @param \PhpOffice\Common\XMLWriter $xmlWriter
      * @param \PhpOffice\PhpWord\Element\Cell $cell
-     * @return void
      */
     private function writeCell(XMLWriter $xmlWriter, CellElement $cell)
     {
-
         $xmlWriter->startElement('w:tc');
 
         // Write style
