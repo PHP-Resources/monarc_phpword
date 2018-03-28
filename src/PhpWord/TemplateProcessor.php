@@ -184,7 +184,7 @@ class TemplateProcessor
 
     /**
      * Applies XSL style sheet to template's parts.
-     * 
+     *
      * Note: since the method doesn't make any guess on logic of the provided XSL style sheet,
      * make sure that output is correctly escaped. Otherwise you may get broken document.
      *
@@ -289,8 +289,8 @@ class TemplateProcessor
         //$replace = self::ensureUtf8Encoded($replace);
 
         $replace = str_replace(
-            ['<br>', '<div>', '</div>'],
-            ['<br/>', '', ''],
+            ['<br>', '<div>', '</div>', '&lt;', '&gt;'],
+            ['<br/>', '', '', '', ''],
             $replace
         );
 
