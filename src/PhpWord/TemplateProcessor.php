@@ -289,8 +289,8 @@ class TemplateProcessor
         //$replace = self::ensureUtf8Encoded($replace);
 
         $replace = str_replace(
-            ['<br>', '<div>', '</div>', '&lt;', '&gt;'],
-            ['<br/>', '', '', '', ''],
+            ['<br><br>','<br>', '<div>', '</div>', '&lt;', '&gt;'],
+            ['<br/>','<br/>', '', '', '', ''],
             $replace
         );
 
