@@ -137,7 +137,7 @@ class Html
             'ol'        => array('List',        null,   null,       $styles,    $data,  7,              null),
             'li'        => array('ListItem',    $node,  $element,   $styles,    $data,  null,           null),
             'img'       => array('Image',       $node,  $element,   $styles,    null,   null,           null),
-            'br'        => array('LineBreak',   null,   $element,   $styles,    null,   null,           null),
+            //'br'        => array('LineBreak',   null,   $element,   $styles,    null,   null,           null), // Fix linebreaks in generation word file
         );
 
         $newElement = null;
