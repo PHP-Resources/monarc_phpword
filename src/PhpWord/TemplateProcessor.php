@@ -294,6 +294,8 @@ class TemplateProcessor
             $replace
         );
 
+        $replace = preg_replace("/&amp;/", " ", $replace);
+
         // Turn it into word data
         $phpWord = new \PhpOffice\PhpWord\PhpWord();
         $section = $phpWord->addSection();
