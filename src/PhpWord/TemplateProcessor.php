@@ -247,8 +247,8 @@ class TemplateProcessor
      */
     public function setValue($search, $replace, $limit = self::MAXIMUM_REPLACEMENTS_DEFAULT)
     {
-        //$replace = str_replace('&', '&amp;', $replace);
-        //$replace = preg_replace('~\R~u', '</w:t><w:br/><w:t>', $replace);
+        $replace = str_replace('&', '&amp;', $replace);
+        $replace = preg_replace('~\R~u', '</w:t><w:br/><w:t>', $replace);
 
         if (is_array($search)) {
             foreach ($search as &$item) {
