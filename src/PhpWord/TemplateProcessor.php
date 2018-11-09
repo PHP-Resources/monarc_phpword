@@ -247,7 +247,11 @@ class TemplateProcessor
      */
     public function setValue($search, $replace, $limit = self::MAXIMUM_REPLACEMENTS_DEFAULT)
     {
-        $replace = str_replace('&', '&amp;', $replace);
+        $replace = str_replace(
+            ['&lt;', '&gt;', '&'],
+            ['_lt_', '_gt_', '_amp_'],
+            $replace
+        );
         $replace = preg_replace('~\R~u', '</w:t><w:br/><w:t>', $replace);
 
         if (is_array($search)) {
@@ -289,12 +293,10 @@ class TemplateProcessor
         //$replace = self::ensureUtf8Encoded($replace);
 
         $replace = str_replace(
-            ['<br><br>','<br>', '<div>', '</div>', '&lt;', '&gt;'],
-            ['<br/>','<br/>', '', '', '', ''],
+            ['<br><br>','<br>', '<div>', '</div>', '&lt;', '&gt;', '&amp;'],
+            ['<br/>','<br/>', '', '', '', '_gt_', ''],
             $replace
         );
-
-        $replace = preg_replace("/&amp;/", " ", $replace);
 
         // Turn it into word data
         $phpWord = new \PhpOffice\PhpWord\PhpWord();
@@ -327,7 +329,11 @@ class TemplateProcessor
                 $escapedSearch = preg_quote($node->asXML(), $regExpDelim);
 
                 $attr = $node->attributes();
-                $xmlReplace = new \SimpleXMLElement($replace);
+                try {
+                    $xmlReplace = new \SimpleXMLElement($replace);
+                } catch (\Exception $e) {
+                    continue;
+                }
                 foreach($xmlReplace->xpath("//w:p") as &$sub){
                     foreach($attr as $a => $b){
                         $sub->addAttribute($a,$b);
@@ -702,6 +708,12 @@ class TemplateProcessor
         if(!empty($documentPartXML)){
             $regExpDelim = '/';
             $escapedSearch = preg_quote($search, $regExpDelim);
+            $search = preg_replace("/&amp;/", " ", $search);
+            // try {
+            //     $xml = new \SimpleXMLElement($documentPartXML);
+            // } catch (\Exception $e) {
+            //     return $documentPartXML;
+            // }
             $xml = new \SimpleXMLElement($documentPartXML);
             foreach ($xml->xpath("//w:p/*[contains(.,'{$search}')]/parent::*") as $node) {
                 $count = 0;
