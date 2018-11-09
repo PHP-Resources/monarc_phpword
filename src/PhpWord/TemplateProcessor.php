@@ -709,12 +709,12 @@ class TemplateProcessor
             $regExpDelim = '/';
             $escapedSearch = preg_quote($search, $regExpDelim);
             $search = preg_replace("/&amp;/", " ", $search);
-            // try {
-            //     $xml = new \SimpleXMLElement($documentPartXML);
-            // } catch (\Exception $e) {
-            //     return $documentPartXML;
-            // }
-            $xml = new \SimpleXMLElement($documentPartXML);
+            try {
+                $xml = new \SimpleXMLElement($documentPartXML);
+            } catch (\Exception $e) {
+                return $documentPartXML;
+            }
+            // $xml = new \SimpleXMLElement($documentPartXML);
             foreach ($xml->xpath("//w:p/*[contains(.,'{$search}')]/parent::*") as $node) {
                 $count = 0;
                 $escapedSearch = preg_quote($node->asXML(), $regExpDelim);
